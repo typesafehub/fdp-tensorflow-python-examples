@@ -5,8 +5,10 @@
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from tensorflow.python.tools import freeze_graph
-from tensorflow.python.tools import optimize_for_inference_lib
+from tensorflow.python.saved_model import builder as saved_model_builder
+from tensorflow.python.saved_model import signature_def_utils
+from tensorflow.core.protobuf import meta_graph_pb2
+from tensorflow.core.framework import types_pb2
 
 # Let's create some toy data
 plt.ion()
@@ -49,7 +51,8 @@ learning_rate = 0.01
 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost)
 
 # Saver op to save and restore all the variables
-saver = tf.train.Saver()
+export_dir = "/Users/boris/Projects/TensorFlowPython/savedmodels/"
+builder = saved_model_builder.SavedModelBuilder(export_dir)
 
 # We create a session to use the graph
 n_epochs = 1000
@@ -81,49 +84,20 @@ with tf.Session() as sess:
         prev_training_cost = training_cost
     print "weight ", sess.run(W), " bias ", sess.run(b)
 
+    # Build and populate a SignatureDef for testing.
+    inputTensor = meta_graph_pb2.TensorInfo()
+    inputTensor.dtype = types_pb2.DT_FLOAT
+    inputTensor.name = "x"
+    outputTensor = meta_graph_pb2.TensorInfo()
+    outputTensor.dtype = types_pb2.DT_FLOAT
+    outputTensor.name = "Y_pred"
+    linear_signature = signature_def_utils.build_signature_def(
+       {"linear_inputs": inputTensor}, {"linear_outputs": outputTensor}, "linear")
     # Save produced model
-    model_path = "/Users/boris/Projects/TensorFlowPython/models/"
-    model_name = "LinearRegression"
-    save_path = saver.save(sess, model_path+model_name+".ckpt")
-    print "Saved model at ", save_path
-    graph_path = tf.train.write_graph(sess.graph_def, model_path, model_name+".pb", as_text=True)
-    print "Saved graph at :", graph_path
+    builder.add_meta_graph_and_variables(sess,
+                                         ["TRAINING"],
+                                         signature_def_map={"linear": linear_signature})
+    builder.save()
 
-# Now freeze the graph (put variables into graph)
-
-input_saver_def_path = ""
-input_binary = False
-output_node_names = "Y_pred"            # Model result node
-restore_op_name = "save/restore_all"
-filename_tensor_name = "save/Const:0"
-output_frozen_graph_name = model_path + 'frozen_' + model_name + '.pb'
-clear_devices = True
-
-
-freeze_graph.freeze_graph(graph_path, input_saver_def_path,
-                          input_binary, save_path, output_node_names,
-                          restore_op_name, filename_tensor_name,
-                          output_frozen_graph_name, clear_devices, "")
-print "Model is frozen"
-
-# optimizing graph
-
-input_graph_def = tf.GraphDef()
-with tf.gfile.Open(output_frozen_graph_name, "r") as f:
-    data = f.read()
-    input_graph_def.ParseFromString(data)
-
-
-output_graph_def = optimize_for_inference_lib.optimize_for_inference(
-    input_graph_def,
-    ["x"], # an array of the input node(s)
-    ["Y_pred"], # an array of output nodes
-    tf.float32.as_datatype_enum)
-
-# Save the optimized graph
-
-tf.train.write_graph(output_graph_def, model_path, "optimized_" + model_name + ".pb", as_text=False)
-tf.train.write_graph(output_graph_def, model_path, "optimized_text_" + model_name + ".pb", as_text=True)
-
-fig.show()
+#close plot
 plt.waitforbuttonpress()
