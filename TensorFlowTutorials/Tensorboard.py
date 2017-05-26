@@ -54,7 +54,7 @@ with tf.name_scope("accuracy"):
 with tf.Session() as sess:
     # create a log writer. run 'tensorboard --logdir=./logs/nn_logs'
     # once this is created execute
-    #   python -m tensorflow.tensorboard --logdir /Users/boris/Projects/TensorFlowPython/TensorFlowTutorials//logs/
+    #   python -m tensorflow.tensorboard --logdir /Users/boris/Projects/TensorFlowPython/TensorFlowTutorials/logs/
     # go to localhost:6006 to watch tensorboard
     writer = tf.summary.FileWriter("./logs/nn_logs", sess.graph) # for 1.0
     merged = tf.summary.merge_all()
