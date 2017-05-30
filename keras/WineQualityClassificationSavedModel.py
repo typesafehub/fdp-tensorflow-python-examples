@@ -1,4 +1,5 @@
 # based on the example http://machinelearningmastery.com/multi-class-classification-tutorial-keras-deep-learning-library/
+# additionally, thread https://github.com/tensorflow/serving/issues/310#issuecomment-297015251 has a lot of info and explanations
 
 import numpy
 import pandas
